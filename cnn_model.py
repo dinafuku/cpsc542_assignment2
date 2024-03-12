@@ -116,8 +116,13 @@ plt.legend(['Train', 'Validation'], loc='upper left')
 
 plt.tight_layout()
 
+# create the "predicted_masks" folder if it does not exist
+unet_results = "unet_results"
+if not os.path.exists(unet_results):
+    os.makedirs(unet_results)
+
 # save figures
-plt.savefig('training_history.png')
+plt.savefig(os.path.join(unet_results, "training_history.png"))
 
 # show plots
 plt.show()
@@ -135,11 +140,6 @@ print("Train Loss:", train_loss)
 print("Validation Loss:", val_loss)
 print("Test Loss:", test_loss)
 
-# create the "predicted_masks" folder if it does not exist
-predicted_masks_folder = "predicted_masks"
-if not os.path.exists(predicted_masks_folder):
-    os.makedirs(predicted_masks_folder)
-
 # save figures of original image + mask + predicted mask
 def plot_and_save_images(images, true_masks, predicted_masks, index):
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
@@ -156,7 +156,7 @@ def plot_and_save_images(images, true_masks, predicted_masks, index):
     axes[2].axis("off")
     
     plt.tight_layout()
-    plt.savefig(os.path.join(predicted_masks_folder, f"predicted_mask_{index}.png"))
+    plt.savefig(os.path.join(unet_results, f"predicted_mask_{index}.png"))
     plt.close()
 
 # get images and true masks from test dataset
