@@ -8,9 +8,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, jaccard_score
 
-# path to data
-images_folder = 'data/images'
-masks_folder = 'data/masks'
+# get the current directory of file
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# get the parent directory of the data folder
+images_folder = "data/images"
+masks_folder = "data/masks"
 
 # load and preprocess images and masks
 images, masks = load_and_preprocess_data(images_folder, masks_folder, 30)

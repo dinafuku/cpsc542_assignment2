@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 from PIL import Image
 
 # paths to data
-images_folder = 'data/images'
-masks_folder = 'data/masks'
+images_folder = 'models/data/images'
+masks_folder = 'models/data/masks'
 output_folder = 'eda_visuals'
 
 # list of images/masks
