@@ -11,12 +11,13 @@ from tensorflow.keras.models import Model
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score, jaccard_score
 
-# path to data
-images_folder = 'data/images'
-masks_folder = 'data/masks'
+# get data directory respectively
+parent_dir = os.path.dirname(os.path.abspath(__file__))
+image_dir = os.path.join(parent_dir, '..', 'data', 'images')
+mask_dir = os.path.join(parent_dir, '..', 'data', 'masks')
 
 # preprocess images/masks
-images, masks = load_and_preprocess_data(images_folder, masks_folder, 200)
+images, masks = load_and_preprocess_data(image_dir, mask_dir, 200)
 
 # normalize pixel values between [0,1]
 images = images / 255.0

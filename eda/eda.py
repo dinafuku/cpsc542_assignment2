@@ -2,14 +2,21 @@ import os
 import matplotlib.pyplot as plt
 from PIL import Image
 
-# paths to data
-images_folder = 'models/data/images'
-masks_folder = 'models/data/masks'
+# get data directory respectively
+parent_dir = os.path.dirname(os.path.abspath(__file__))
+image_dir = os.path.join(parent_dir, '..', 'data', 'images')
+mask_dir = os.path.join(parent_dir, '..', 'data', 'masks')
+
 output_folder = 'eda_visuals'
 
+# create the "predicted_masks" folder if it does not exist
+output_folder = "eda_visuals"
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
+
 # list of images/masks
-image_files = sorted(os.listdir(images_folder))
-mask_files = sorted(os.listdir(masks_folder))
+image_files = sorted(os.listdir(image_dir))
+mask_files = sorted(os.listdir(mask_dir))
 
 # print number of images/masks
 num_images = len(image_files)
@@ -23,8 +30,8 @@ def load_images_and_masks(image_files, mask_files):
     images = []
     masks = []
     for img_file, mask_file in zip(image_files, mask_files):
-        img_path = os.path.join(images_folder, img_file)
-        mask_path = os.path.join(masks_folder, mask_file)
+        img_path = os.path.join(image_dir, img_file)
+        mask_path = os.path.join(mask_dir, mask_file)
         image = Image.open(img_path)
         mask = Image.open(mask_path)  
         images.append(image)
@@ -54,8 +61,8 @@ for i in range(num_examples):
 def get_unique_dimensions(image_files, mask_files):
     dimensions = set()
     for img_file, mask_file in zip(image_files, mask_files):
-        img_path = os.path.join(images_folder, img_file)
-        mask_path = os.path.join(masks_folder, mask_file)
+        img_path = os.path.join(image_dir, img_file)
+        mask_path = os.path.join(mask_dir, mask_file)
         image_size = Image.open(img_path).size
         mask_size = Image.open(mask_path).size
         dimensions.add(image_size)
