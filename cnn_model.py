@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import tensorflow as tf
+from preprocess import load_and_preprocess_data
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
@@ -14,25 +15,8 @@ from sklearn.metrics import accuracy_score, jaccard_score
 images_folder = 'data/images'
 masks_folder = 'data/masks'
 
-# list of images/masks
-image_files = sorted(os.listdir(images_folder))[:200]
-mask_files = sorted(os.listdir(masks_folder))[:200]
-
 # preprocess images/masks
-def load_and_preprocess_data(image_files, mask_files, img_size=(224, 224)):
-    images = []
-    masks = []
-    for img_file, mask_file in zip(image_files, mask_files):
-        img_path = os.path.join(images_folder, img_file)
-        mask_path = os.path.join(masks_folder, mask_file)
-        image = tf.keras.preprocessing.image.load_img(img_path, target_size=img_size)
-        mask = tf.keras.preprocessing.image.load_img(mask_path, target_size=img_size, color_mode="grayscale")
-        images.append(np.array(image))
-        masks.append(np.array(mask))
-    return np.array(images), np.array(masks)
-
-# preprocess images/masks
-images, masks = load_and_preprocess_data(image_files, mask_files)
+images, masks = load_and_preprocess_data(images_folder, masks_folder, 200)
 
 # normalize pixel values between [0,1]
 images = images / 255.0

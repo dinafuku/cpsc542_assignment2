@@ -3,3 +3,4 @@ images
 masks
 data
 eda_images
+__pycache__

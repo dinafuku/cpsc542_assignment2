@@ -3,6 +3,7 @@ import os
 import time
 import numpy as np
 from PIL import Image
+from preprocess import load_and_preprocess_data
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, jaccard_score
@@ -11,28 +12,8 @@ from sklearn.metrics import accuracy_score, jaccard_score
 images_folder = 'data/images'
 masks_folder = 'data/masks'
 
-# get the list of image and mask files
-image_files = sorted(os.listdir(images_folder))[:75]
-mask_files = sorted(os.listdir(masks_folder))[:75]
-
-# load, preprocess images/masks
-def load_and_preprocess_data(image_files, mask_files, img_size=(224, 224)):
-    images = []
-    masks = []
-    for img_file, mask_file in zip(image_files, mask_files):
-        img_path = os.path.join(images_folder, img_file)
-        mask_path = os.path.join(masks_folder, mask_file)
-        image = Image.open(img_path).resize(img_size)  # resize image
-        mask = Image.open(mask_path).resize(img_size).convert('L')  # resize and convert to grayscale
-        images.append(np.array(image))
-        masks.append(np.array(mask))
-    return np.array(images), np.array(masks)
-
-load_start = time.time()
 # load and preprocess images and masks
-images, masks = load_and_preprocess_data(image_files, mask_files)
-load_end = time.time()
-print(f"Preprocessing took {load_end-load_start} seconds...")
+images, masks = load_and_preprocess_data(images_folder, masks_folder, 30)
 
 # flatten images and masks for RF
 X_train_flat = images.reshape(len(images), -1)  
