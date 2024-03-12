@@ -5,11 +5,11 @@ from preprocess import load_and_preprocess_data
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
-from tensorflow.keras.layers import UpSampling2D, BatchNormalization
-from tensorflow.keras.layers import Input, Conv2D, Conv2DTranspose, Concatenate
+from tensorflow.keras.layers import Input, Conv2D, Conv2DTranspose, Concatenate, Dropout, UpSampling2D, BatchNormalization
 from tensorflow.keras.models import Model
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score, jaccard_score
+from tensorflow.keras.callbacks import EarlyStopping
 
 # get data directory respectively
 parent_dir = os.path.dirname(os.path.abspath(__file__))
@@ -43,7 +43,7 @@ test_dataset = tf.data.Dataset.from_tensor_slices((X_test, y_test))
 test_dataset = test_dataset.batch(batch_size)
 
 # modular decoder block for decoder part of UNET model
-def decoder_block(first, x, skip, filters):
+def decoder_block(first, x, skip, filters, dropout_rate=0.2):
     if first:
         x = UpSampling2D((4, 4))(x)
     else:
@@ -51,8 +51,10 @@ def decoder_block(first, x, skip, filters):
     x = Concatenate()([x, skip])
     x = Conv2D(filters, 3, activation='relu', padding='same')(x)
     x = BatchNormalization()(x)
+    x = Dropout(dropout_rate)(x)
     x = Conv2D(filters, 3, activation='relu', padding='same')(x)
     x = BatchNormalization()(x)
+    x = Dropout(dropout_rate)(x)
     return x
 
 def unet_model():
@@ -91,8 +93,11 @@ unet.compile(optimizer=Adam(learning_rate=0.001), loss='binary_crossentropy', me
 # print model summary
 unet.summary()
 
+# configure early stopping
+early_stopping = EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)
+
 # fit UNET model
-history = unet.fit(train_dataset, epochs=25, validation_data=val_dataset)
+history = unet.fit(train_dataset, epochs=50, validation_data=val_dataset, callbacks=[early_stopping])
 
 # plot training history
 plt.figure(figsize=(12, 5))
@@ -166,5 +171,5 @@ for i, (images, true_masks) in enumerate(test_dataset):
     predicted_masks = unet.predict(images)
     
     # plot and save images + true masks + predicted masks for some examples
-    for j in range(min(len(images), 5)):
+    for j in range(min(len(images), 10)):
         plot_and_save_images(images, true_masks, predicted_masks, j)
