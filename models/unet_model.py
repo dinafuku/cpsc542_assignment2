@@ -17,7 +17,7 @@ image_dir = os.path.join(parent_dir, '..', 'data', 'images')
 mask_dir = os.path.join(parent_dir, '..', 'data', 'masks')
 
 # preprocess images/masks
-images, masks = load_and_preprocess_data(image_dir, mask_dir, 200)
+images, masks = load_and_preprocess_data(image_dir, mask_dir, 1000)
 
 # normalize pixel values between [0,1]
 images = images / 255.0
@@ -138,6 +138,72 @@ train_loss, train_accuracy = unet.evaluate(train_dataset)
 val_loss, val_accuracy = unet.evaluate(val_dataset)
 test_loss, test_accuracy = unet.evaluate(test_dataset)
 
+# compute IOU score using jaccard score for training dataset
+train_scores = []
+for images, true_masks in train_dataset:
+    predicted_masks = unet.predict(images)
+    for true_mask, predicted_mask in zip(true_masks, predicted_masks):
+        # remove single dimension, convert to bool
+        true_mask = true_mask.numpy().squeeze().astype(bool)  
+        # threshold the mask using 0.5 as convert to boolean
+        predicted_mask = (predicted_mask.squeeze() > 0.5).astype(bool)
+        # compute IOU score by comparing the true mask to the predicted mask
+        jaccard = jaccard_score(true_mask.flatten(), predicted_mask.flatten())
+        train_scores.append(jaccard)
+
+# compute IOU score using jaccard score for validation dataset
+val_scores = []
+for images, true_masks in val_dataset:
+    predicted_masks = unet.predict(images)
+    for true_mask, predicted_mask in zip(true_masks, predicted_masks):
+        true_mask = true_mask.numpy().squeeze().astype(bool)  
+        predicted_mask = (predicted_mask.squeeze() > 0.5).astype(bool)  
+        jaccard = jaccard_score(true_mask.flatten(), predicted_mask.flatten())
+        val_scores.append(jaccard)
+
+# compute IOU score using jaccard score for test dataset
+test_scores = []
+for images, true_masks in test_dataset:
+    predicted_masks = unet.predict(images)
+    for true_mask, predicted_mask in zip(true_masks, predicted_masks):
+        true_mask = true_mask.numpy().squeeze().astype(bool)  
+        predicted_mask = (predicted_mask.squeeze() > 0.5).astype(bool)  
+        jaccard = jaccard_score(true_mask.flatten(), predicted_mask.flatten())
+        test_scores.append(jaccard)
+
+# Create directory to save the images if it doesn't exist
+result_folder = "3best_worse"
+if not os.path.exists(result_folder):
+    os.makedirs(result_folder)
+
+# plot and save IOU images
+def save_images(images, masks, prefix):
+    for i, (image, mask) in enumerate(zip(images, masks)):
+        plt.figure(figsize=(15, 5))
+        plt.subplot(1, 3, 1)
+        plt.imshow(image)
+        plt.title("Original Image")
+        plt.axis("off")
+
+        plt.subplot(1, 3, 2)
+        plt.imshow(mask, cmap="gray")
+        plt.title("True Mask")
+        plt.axis("off")
+
+        plt.subplot(1, 3, 3)
+        plt.imshow(masks[i], cmap="gray")
+        plt.title("Predicted Mask")
+        plt.axis("off")
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(result_folder, f"{prefix}_{i}.png"))
+        plt.close()
+
+# compute mean Jaccard scores
+mean_train_jaccard = np.mean(train_scores)
+mean_val_jaccard = np.mean(val_scores)
+mean_test_jaccard = np.mean(test_scores)
+
 # print out train,validation,test performance
 print("Train Accuracy:", train_accuracy)
 print("Validation Accuracy:", val_accuracy)
@@ -145,6 +211,11 @@ print("Test Accuracy:", test_accuracy)
 print("Train Loss:", train_loss)
 print("Validation Loss:", val_loss)
 print("Test Loss:", test_loss)
+
+# print out mean IOU scores
+print("Train Mean IOU:", mean_train_jaccard)
+print("Validation Mean IOU:", mean_val_jaccard)
+print("Test Mean IOU:", mean_test_jaccard)
 
 # save figures of original image + mask + predicted mask
 def plot_and_save_images(images, true_masks, predicted_masks, index):
