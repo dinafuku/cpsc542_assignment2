@@ -9,7 +9,9 @@ from tensorflow.keras.layers import Input, Conv2D, Conv2DTranspose, Concatenate,
 from tensorflow.keras.models import Model
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score, jaccard_score
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler
+from tf_keras_vis.gradcam import GradcamPlusPlus
+from tf_keras_vis.utils import normalize
 
 # get data directory respectively
 parent_dir = os.path.dirname(os.path.abspath(__file__))
@@ -17,7 +19,7 @@ image_dir = os.path.join(parent_dir, '..', 'data', 'images')
 mask_dir = os.path.join(parent_dir, '..', 'data', 'masks')
 
 # preprocess images/masks
-images, masks = load_and_preprocess_data(image_dir, mask_dir, 1000)
+images, masks = load_and_preprocess_data(image_dir, mask_dir, 100)
 
 # normalize pixel values between [0,1]
 images = images / 255.0
@@ -94,10 +96,20 @@ unet.compile(optimizer=Adam(learning_rate=0.001), loss='binary_crossentropy', me
 unet.summary()
 
 # configure early stopping
-early_stopping = EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)
+early_stopping = EarlyStopping(monitor='val_loss', patience=3, verbose=1, restore_best_weights=True)
+
+# defining a leanring rate scheduler
+def lr_schedule(epoch):
+    initial_lr = 0.001
+    decay_rate = 0.9
+    decay_step = 10
+    lr = initial_lr * (decay_rate ** (epoch // decay_step))
+    return lr
+
+lr_scheduler = LearningRateScheduler(lr_schedule)
 
 # fit UNET model
-history = unet.fit(train_dataset, epochs=50, validation_data=val_dataset, callbacks=[early_stopping])
+history = unet.fit(train_dataset, epochs=50, validation_data=val_dataset, callbacks=[early_stopping, lr_scheduler])
 
 # plot training history
 plt.figure(figsize=(12, 5))
@@ -163,41 +175,15 @@ for images, true_masks in val_dataset:
 
 # compute IOU score using jaccard score for test dataset
 test_scores = []
+best_worst = []
 for images, true_masks in test_dataset:
     predicted_masks = unet.predict(images)
-    for true_mask, predicted_mask in zip(true_masks, predicted_masks):
+    for image, true_mask, predicted_mask in zip(images, true_masks, predicted_masks):
         true_mask = true_mask.numpy().squeeze().astype(bool)  
         predicted_mask = (predicted_mask.squeeze() > 0.5).astype(bool)  
         jaccard = jaccard_score(true_mask.flatten(), predicted_mask.flatten())
         test_scores.append(jaccard)
-
-# Create directory to save the images if it doesn't exist
-result_folder = "3best_worse"
-if not os.path.exists(result_folder):
-    os.makedirs(result_folder)
-
-# plot and save IOU images
-def save_images(images, masks, prefix):
-    for i, (image, mask) in enumerate(zip(images, masks)):
-        plt.figure(figsize=(15, 5))
-        plt.subplot(1, 3, 1)
-        plt.imshow(image)
-        plt.title("Original Image")
-        plt.axis("off")
-
-        plt.subplot(1, 3, 2)
-        plt.imshow(mask, cmap="gray")
-        plt.title("True Mask")
-        plt.axis("off")
-
-        plt.subplot(1, 3, 3)
-        plt.imshow(masks[i], cmap="gray")
-        plt.title("Predicted Mask")
-        plt.axis("off")
-
-        plt.tight_layout()
-        plt.savefig(os.path.join(result_folder, f"{prefix}_{i}.png"))
-        plt.close()
+        best_worst.append((jaccard, image, true_mask, predicted_mask))
 
 # compute mean Jaccard scores
 mean_train_jaccard = np.mean(train_scores)
@@ -218,8 +204,8 @@ print("Validation Mean IOU:", mean_val_jaccard)
 print("Test Mean IOU:", mean_test_jaccard)
 
 # save figures of original image + mask + predicted mask
-def plot_and_save_images(images, true_masks, predicted_masks, index):
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+def plot_and_save_images(images, true_masks, predicted_masks, index, folder):
+    fig, axes = plt.subplots(1, 3, figsize=(15, 6))
     axes[0].imshow(images[index])
     axes[0].set_title("Original Image")
     axes[0].axis("off")
@@ -233,7 +219,7 @@ def plot_and_save_images(images, true_masks, predicted_masks, index):
     axes[2].axis("off")
     
     plt.tight_layout()
-    plt.savefig(os.path.join(unet_results, f"predicted_mask_{index}.png"))
+    plt.savefig(os.path.join(folder, f"predicted_mask_{index}.png"))
     plt.close()
 
 # get images and true masks from test dataset
@@ -243,4 +229,46 @@ for i, (images, true_masks) in enumerate(test_dataset):
     
     # plot and save images + true masks + predicted masks for some examples
     for j in range(min(len(images), 10)):
-        plot_and_save_images(images, true_masks, predicted_masks, j)
+        plot_and_save_images(images, true_masks, predicted_masks, j, unet_results)
+
+# create directory for best/worst images
+result_folder = "3best_worst"
+if not os.path.exists(result_folder):
+    os.makedirs(result_folder)
+
+# sort list by IOU scores to get 3 best
+top_3_highest = sorted(best_worst, key=lambda x: x[0], reverse=True)[:3]
+
+# sort list by IOU scores to get 3 worst
+bottom_3_lowest = sorted(best_worst, key=lambda x: x[0])[:3]
+
+def save_best_worst(image, true_masks, predicted_masks, index, folder, name):
+    fig, axes = plt.subplots(1, 3, figsize=(15, 6))
+    axes[0].imshow(image)
+    axes[0].set_title("Original Image")
+    axes[0].axis("off")
+    
+    axes[1].imshow(true_masks, cmap="gray")
+    axes[1].set_title("True Mask")
+    axes[1].axis("off")
+    
+    axes[2].imshow(predicted_masks, cmap="gray")
+    axes[2].set_title("Predicted Mask")
+    axes[2].axis("off")
+    
+    plt.tight_layout()
+    plt.savefig(os.path.join(folder, f"{name}_{index}.png"))
+    plt.close()
+
+# save figures for 3 highest IOU scores
+for i, (jaccard, image, true_mask, predicted_mask) in enumerate(top_3_highest):
+    save_best_worst(image, true_mask, predicted_mask, i, "3best_worst", "best")
+
+# save figures for 3 lowest IOU scores
+for i, (jaccard, image, true_mask, predicted_mask) in enumerate(bottom_3_lowest):
+    save_best_worst(image, true_mask, predicted_mask, i, "3best_worst", "worst")
+
+# create directory for gradcam images
+gradcam_images_folder = "gradcam_images"
+if not os.path.exists(gradcam_images_folder):
+    os.makedirs(gradcam_images_folder)
