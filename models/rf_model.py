@@ -7,6 +7,9 @@ from preprocess import load_and_preprocess_data
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, jaccard_score
+import matplotlib.pyplot as plt
+
+start = time.time()
 
 # get data directory respectively
 parent_dir = os.path.dirname(os.path.abspath(__file__))
@@ -14,7 +17,7 @@ image_dir = os.path.join(parent_dir, '..', 'data', 'images')
 mask_dir = os.path.join(parent_dir, '..', 'data', 'masks')
 
 # load and preprocess images and masks
-images, masks = load_and_preprocess_data(image_dir, mask_dir, 30)
+images, masks = load_and_preprocess_data(image_dir, mask_dir, 250)
 
 # flatten images and masks for RF
 X_train_flat = images.reshape(len(images), -1)  
@@ -71,6 +74,11 @@ def plot_rf_result(image, true_mask, predicted_mask, folder, index):
     plt.savefig(os.path.join(folder, f"rf_result_{index}.png"))
     plt.close()
 
+# Create directory for rf images
+rf_results = "rf_results"
+if not os.path.exists(rf_results):
+    os.makedirs(rf_results)
+
 # grabbing an example from test set
 sample_index = 0
 sample_image = X_test[sample_index]
@@ -80,4 +88,7 @@ sample_true_mask = y_test[sample_index]
 sample_pred_mask = rf_model.predict(sample_image.reshape(1, -1))
 
 # plot and save
-plot_rf_result(sample_image, sample_true_mask, sample_pred_mask, "rf_results", sample_index)
+plot_rf_result(sample_image, sample_true_mask, sample_pred_mask, rf_results, sample_index)
+
+end = time.time()
+print(f"\nTotal Runtime {end-start} seconds")
