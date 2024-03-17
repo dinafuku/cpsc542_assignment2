@@ -51,3 +51,33 @@ print("\nTraining Accuracy: ", train_accuracy)
 print("Testing Accuracy: ", test_accuracy)
 print("Training IoU: ", train_iou)
 print("Testing IoU: ", test_iou)
+
+# plotting and saving original image, true make, predicted mask for image segmentation mask
+def plot_rf_result(image, true_mask, predicted_mask, folder, index):
+    fig, axes = plt.subplots(1, 3, figsize=(15, 6))
+    axes[0].imshow(image.reshape(224, 224, 3))
+    axes[0].set_title("Original Image")
+    axes[0].axis("off")
+    
+    axes[1].imshow(true_mask.reshape(224, 224), cmap="gray")
+    axes[1].set_title("True Mask")
+    axes[1].axis("off")
+    
+    axes[2].imshow(predicted_mask.reshape(224, 224), cmap="gray")
+    axes[2].set_title("Predicted Mask")
+    axes[2].axis("off")
+    
+    plt.tight_layout()
+    plt.savefig(os.path.join(folder, f"rf_result_{index}.png"))
+    plt.close()
+
+# grabbing an example from test set
+sample_index = 0
+sample_image = X_test[sample_index]
+sample_true_mask = y_test[sample_index]
+
+# predict mask
+sample_pred_mask = rf_model.predict(sample_image.reshape(1, -1))
+
+# plot and save
+plot_rf_result(sample_image, sample_true_mask, sample_pred_mask, "rf_results", sample_index)
