@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import tensorflow as tf
+import time
 from preprocess import load_and_preprocess_data
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.optimizers import Adam
@@ -12,6 +13,8 @@ from sklearn.metrics import accuracy_score, jaccard_score
 from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler
 from tf_keras_vis.gradcam import GradcamPlusPlus
 from tf_keras_vis.utils import normalize
+
+start = time.time()
 
 # get data directory respectively
 parent_dir = os.path.dirname(os.path.abspath(__file__))
@@ -96,7 +99,7 @@ unet.compile(optimizer=Adam(learning_rate=0.001), loss='binary_crossentropy', me
 unet.summary()
 
 # configure early stopping
-early_stopping = EarlyStopping(monitor='val_loss', patience=3, verbose=1, restore_best_weights=True)
+early_stopping = EarlyStopping(monitor='val_loss', patience=5, verbose=1, restore_best_weights=True)
 
 # defining a leanring rate scheduler
 def lr_schedule(epoch):
@@ -268,7 +271,72 @@ for i, (jaccard, image, true_mask, predicted_mask) in enumerate(top_3_highest):
 for i, (jaccard, image, true_mask, predicted_mask) in enumerate(bottom_3_lowest):
     save_best_worst(image, true_mask, predicted_mask, i, "3best_worst", "worst")
 
-# create directory for gradcam images
-gradcam_images_folder = "gradcam_images"
-if not os.path.exists(gradcam_images_folder):
-    os.makedirs(gradcam_images_folder)
+# Create directory for Grad-CAM images
+heatmap_images_folder = "heatmap_images"
+if not os.path.exists(heatmap_images_folder):
+    os.makedirs(heatmap_images_folder)
+
+# function to normalize the heatmap
+def normalize_heatmap(heatmap):
+    max_value = tf.reduce_max(heatmap)
+    min_value = tf.reduce_min(heatmap)
+    normalized_heatmap = (heatmap - min_value) / (max_value - min_value)
+    return normalized_heatmap
+
+def generate_heatmap(model, image, target_layer_name='conv2d_7'):
+    # reshape input image
+    image = tf.expand_dims(image, axis=0)
+
+    # get output layer from unet model
+    target_layer_output = model.get_layer(target_layer_name).output
+
+    # output targer layer activation
+    activation_model = tf.keras.models.Model(inputs=model.input, outputs=target_layer_output)
+
+    # get activation map from input
+    activation_map = activation_model.predict(image)
+
+    # resize activation map to match original image
+    heatmap = tf.image.resize(activation_map[0], (image.shape[1], image.shape[2]))
+
+    # reduce the number of channels to match original image
+    heatmap = tf.reduce_max(heatmap, axis=-1, keepdims=True)
+
+    # normalize
+    heatmap = normalize(heatmap)
+
+    return heatmap.numpy(), image.shape[1:3]
+
+def visualize_heatmap(image, heatmap, image_shape):
+    # normalize heatmap to [0, 1]
+    heatmap_normalized = heatmap / tf.reduce_max(heatmap)
+
+    # duplcate the single-channel heatmap, match original image channels
+    heatmap_rgb = tf.tile(heatmap_normalized, [1, 1, 3])
+
+    # overlap heatmap onto original image
+    overlaid_image = image * 0.5 + heatmap_rgb * 0.5 
+    
+    return overlaid_image
+
+plt.clf()
+
+def display_heatmap_visualization(model, images, target_layer_name, num_images=1):
+    for i in range(num_images):
+        sample_image = images[i]
+        heatmap, image_shape = generate_heatmap(model, sample_image, target_layer_name)
+        heatmap_visualization = visualize_heatmap(sample_image, heatmap, image_shape)
+        
+        # display the heatmap visualization
+        plt.imshow(heatmap_visualization)
+        plt.axis('off')
+        plt.show()
+        plt.savefig(os.path.join(heatmap_images_folder, f"heatmap_image_{i}.png"))
+        plt.clf()
+
+image_count = 5  
+display_heatmap_visualization(unet, X_test, target_layer_name='conv2d_7', num_images=image_count)
+
+end = time.time()
+
+print(f"Total Runtime: {end-start} seconds")
