@@ -4,8 +4,11 @@ import tensorflow as tf
 import time
 import matplotlib.pyplot as plt
 from sklearn.metrics import jaccard_score
+from tf_explain.core.grad_cam import GradCAM
 from tensorflow.keras.models import load_model
 from tensorflow.data.experimental import load as tf_load
+
+start = time.time()
 
 # get data directory respectively
 parent_dir = os.path.dirname(os.path.abspath(__file__))
@@ -198,80 +201,24 @@ for i, (jaccard, image, true_mask, predicted_mask) in enumerate(top_3_highest):
 for i, (jaccard, image, true_mask, predicted_mask) in enumerate(bottom_3_lowest):
     save_best_worst(image, true_mask, predicted_mask, i, "3best_worst", "worst")
 
-# Create directory for Grad-CAM images
+# create directory for Grad-CAM images
 heatmap_images_folder = "heatmap_images"
 if not os.path.exists(heatmap_images_folder):
     os.makedirs(heatmap_images_folder)
 
-# Instantiation of the explainer
+# create explainer for GRAD-CAM
 explainer = GradCAM()
 
-# Call to explain() method
-output = explainer.explain(*explainer_args)
+# iterate through the 7 convs2d layers to get grad-cam activations
+for i in range(7):
+    # call to explain() method
+    j = i + 1
 
-# Save output
-explainer.save(output, output_dir, output_name)
+    # get output of explainer using test data and specific conv2d layer
+    output = explainer.explain((X_test, y_test), unet, None, f"conv2d_{j}")
 
-# # function to normalize the heatmap
-# def normalize_heatmap(heatmap):
-#     max_value = tf.reduce_max(heatmap)
-#     min_value = tf.reduce_min(heatmap)
-#     normalized_heatmap = (heatmap - min_value) / (max_value - min_value)
-#     return normalized_heatmap
-
-# def generate_heatmap(model, image, target_layer_name='conv2d_7'):
-#     # reshape input image
-#     image = tf.expand_dims(image, axis=0)
-
-#     # get output layer from unet model
-#     target_layer_output = model.get_layer(target_layer_name).output
-
-#     # output targer layer activation
-#     activation_model = tf.keras.models.Model(inputs=model.input, outputs=target_layer_output)
-
-#     # get activation map from input
-#     activation_map = activation_model.predict(image)
-
-#     # resize activation map to match original image
-#     heatmap = tf.image.resize(activation_map[0], (image.shape[1], image.shape[2]))
-
-#     # reduce the number of channels to match original image
-#     heatmap = tf.reduce_max(heatmap, axis=-1, keepdims=True)
-
-#     # normalize
-#     heatmap = normalize(heatmap)
-
-#     return heatmap.numpy(), image.shape[1:3]
-
-# def visualize_heatmap(image, heatmap, image_shape):
-#     # normalize heatmap to [0, 1]
-#     heatmap_normalized = heatmap / tf.reduce_max(heatmap)
-
-#     # duplcate the single-channel heatmap, match original image channels
-#     heatmap_rgb = tf.tile(heatmap_normalized, [1, 1, 3])
-
-#     # overlap heatmap onto original image
-#     overlaid_image = image * 0.5 + heatmap_rgb * 0.5 
-    
-#     return overlaid_image
-
-# plt.clf()
-
-# def display_heatmap_visualization(model, images, target_layer_name, num_images=1):
-#     for i in range(num_images):
-#         sample_image = images[i]
-#         heatmap, image_shape = generate_heatmap(model, sample_image, target_layer_name)
-#         heatmap_visualization = visualize_heatmap(sample_image, heatmap, image_shape)
-        
-#         # display the heatmap visualization
-#         plt.imshow(heatmap_visualization)
-#         plt.axis('off')
-#         plt.show()
-#         plt.savefig(os.path.join(heatmap_images_folder, f"heatmap_image_{i}.png"))
-#         plt.clf()
-
-# image_count = 5  
-# display_heatmap_visualization(unet, X_test, target_layer_name='conv2d_7', num_images=image_count)
+    # save output in heatmap_images folder
+    explainer.save(output, heatmap_images_folder, f'gradcam_conv2d_{j}.png')
 
 end = time.time()
 

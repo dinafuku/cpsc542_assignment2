@@ -60,12 +60,12 @@ def plot_rf_result(image, true_mask, predicted_mask, folder, index):
     plt.savefig(os.path.join(folder, f"rf_result_{index}.png"))
     plt.close()
 
-# Create directory for rf images
+# create directory for rf images
 rf_results = "rf_results"
 if not os.path.exists(rf_results):
     os.makedirs(rf_results)
 
-# grabbing an example from test set
+# grab test set example
 sample_index = 0
 sample_image = X_test[sample_index]
 sample_true_mask = y_test[sample_index]
