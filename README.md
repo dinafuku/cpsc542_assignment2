@@ -3,7 +3,9 @@ Student Name: Dylan Inafuku
 
 Student ID: 2375529
 
-In-class collaborators: None
+In-class collaborators: Shree Murthy and Rahul Sura
+* Discusses hyperparameter tuning approaches and solutions to RF long run time
+* Searched for libraries and methods to develop Grad-CAM images
 
 Any resources used: 
 * [Dr. Parlett's ML Videos](https://www.youtube.com/@ChelseaPelleriti/featured)
