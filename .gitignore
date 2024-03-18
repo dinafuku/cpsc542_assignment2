@@ -5,3 +5,9 @@ data
 eda_images
 __pycache__
 3best_3worse
+*.npz
+*_dataset
+checkpoint
+*_temp
+*.pkl
+*.h5

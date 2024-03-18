@@ -8,6 +8,7 @@ In-class collaborators:
 Any resources used: 
 * [Dr. Parlett's ML Videos](https://www.youtube.com/@ChelseaPelleriti/featured)
 * [Image Segmentation Preprocessing](https://www.tensorflow.org/tutorials/images/segmentation)
+* [Grad-CAM](https://tf-explain.readthedocs.io/en/latest/methods.html)
 
 Data: https://www.kaggle.com/datasets/tapakah68/supervisely-filtered-segmentation-person-dataset
 
