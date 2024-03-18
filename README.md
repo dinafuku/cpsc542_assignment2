@@ -3,7 +3,7 @@ Student Name: Dylan Inafuku
 
 Student ID: 2375529
 
-In-class collaborators: 
+In-class collaborators: None
 
 Any resources used: 
 * [Dr. Parlett's ML Videos](https://www.youtube.com/@ChelseaPelleriti/featured)

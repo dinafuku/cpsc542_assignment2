@@ -23,7 +23,7 @@ image_dir = os.path.join(parent_dir, '..', 'data', 'images')
 mask_dir = os.path.join(parent_dir, '..', 'data', 'masks')
 
 # preprocess images/masks
-images, masks = load_and_preprocess_data(image_dir, mask_dir, 1000)
+images, masks = load_and_preprocess_data(image_dir, mask_dir, 2000)
 
 # normalize pixel values between [0,1]
 images = images / 255.0
